@@ -17,16 +17,18 @@ public class Program
     {
         var opcodeFileMapArgument = new Argument<FileInfo?>(
             name: "opcodeMapFile",
-            description: "The opcode map to use.");
+            description: "The opcode map to use. Default = \"resources/global.jsonc\"");
         var gameExecutableArgument = new Argument<FileInfo?>(
             name: "gameExecutable",
-            description: "The game executable to map.");
+            description: "The game executable to map. Default = \"C:\\Program Files (x86)\\SquareEnix\\FINAL FANTASY XIV - A Realm Reborn\\game\\ffxiv_dx11.exe\"");
         var dumpAllOpcodesArgument = new Argument<bool>(
             name: "dumpAllOpcodes",
             description: "Should all opcodes be dumped or just those specified in the map file. Default = \"False\"");
         var outputFormatArgument = new Argument<OutputFormat>(
             name: "outputFormat",
             description: "Which output format to use. Default = \"All\"");
+        opcodeFileMapArgument.SetDefaultValue(new FileInfo(@"resources/global.jsonc"));
+        gameExecutableArgument.SetDefaultValue(new FileInfo(@"C:\Program Files (x86)\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\ffxiv_dx11.exe"));
         dumpAllOpcodesArgument.SetDefaultValue(false);
         outputFormatArgument.SetDefaultValue(OutputFormat.All);
 
@@ -60,9 +62,16 @@ public class Program
 
     private static void OutputOpcodesForFFXIV_ACT_Plugin(Dictionary<int, string> opcodes)
     {
-        foreach (var entry in opcodes)
+        using (var sw = new StreamWriter("opcodes-machina.txt", false))
         {
-            Console.WriteLine($"{entry.Value}|{entry.Key:x}");
+            var entries = opcodes.ToList();
+            for (int i = 0; i < entries.Count; i++) {
+                sw.Write($"{entries[i].Value}|{entries[i].Key:x}");
+                if(i < entries.Count - 1)
+                {
+                    sw.WriteLine();
+                }
+            }
         }
     }
 
@@ -81,10 +90,13 @@ public class Program
             overlayPluginMap[entry.Value] = opEntry;
         }
 
-        Console.WriteLine(JsonSerializer.Serialize(overlayPluginMap, new JsonSerializerOptions()
+        using (var sw = new StreamWriter("opcodes-overlayp.json", false))
         {
-            WriteIndented = true
-        }));
+            sw.Write(JsonSerializer.Serialize(overlayPluginMap, new JsonSerializerOptions() 
+            {
+                WriteIndented = true
+            }));
+        }
     }
 
     /// <summary>
