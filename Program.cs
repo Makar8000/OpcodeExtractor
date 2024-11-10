@@ -53,6 +53,7 @@ public class Program
         if (outputFormat == OutputFormat.All || outputFormat == OutputFormat.FFXIV_ACT_Plugin)
         {
             OutputOpcodesForFFXIV_ACT_Plugin(opcodes);
+            try { OpcodePatcher.ReplaceOpcodes(); } catch { }
         }
         if (outputFormat == OutputFormat.All || outputFormat == OutputFormat.OverlayPlugin)
         {
