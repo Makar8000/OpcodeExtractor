@@ -67,8 +67,7 @@ public static class OpcodeExtractorVTable
             Console.WriteLine($"Expected {expectedSwitchTableCount} entries, found {switchTableCount}");
             if (expectedSwitchTableCount != switchTableCount)
             {
-                Console.WriteLine("Switch table count mismatch, press any key to continue anyways");
-                Console.ReadKey(true);
+                Console.WriteLine("Switch table count mismatch, continuing anyways");
             }
             var defaultCaseAddr = offset + defaultCaseAddr_offset + Common.ExtractRIPOffsetFromPtr(funcPtr + defaultCaseAddr_offset);
             var imageBaseOffset = offset + imageBaseOffset_offset + Common.ExtractRIPOffsetFromPtr(funcPtr + imageBaseOffset_offset);
