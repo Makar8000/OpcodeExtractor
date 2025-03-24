@@ -33,7 +33,7 @@ public class Program
         opcodeFileMapArgument.SetDefaultValue(new FileInfo(@"resources/global.jsonc"));
         gameExecutableArgument.SetDefaultValue(new FileInfo(@"C:\Program Files (x86)\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\ffxiv_dx11.exe"));
         dumpAllOpcodesArgument.SetDefaultValue(false);
-        outputFormatArgument.SetDefaultValue(OutputFormat.All);
+        outputFormatArgument.SetDefaultValue(OutputFormat.FFXIV_ACT_Plugin);
         inputMapKeyArgument.SetDefaultValue("FFXIV_ACT_Plugin");
 
         var rootCommand = new RootCommand("Map opcodes as defined in opcodeMapFile for executable gameExecutable");
@@ -50,7 +50,13 @@ public class Program
             },
             opcodeFileMapArgument, gameExecutableArgument, dumpAllOpcodesArgument, outputFormatArgument, inputMapKeyArgument);
 
-        return await rootCommand.InvokeAsync(args);
+        var actResult = await rootCommand.InvokeAsync(args);
+
+        outputFormatArgument.SetDefaultValue(OutputFormat.OverlayPlugin);
+        inputMapKeyArgument.SetDefaultValue("OverlayPlugin");
+        var opResult = await rootCommand.InvokeAsync(args);
+
+        return Math.Max(actResult, opResult);
     }
 
     private static void OutputOpcodes(Dictionary<int, string> opcodes, OutputFormat outputFormat)
