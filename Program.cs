@@ -52,7 +52,7 @@ public class Program
         {
             ReadCommentHandling = JsonCommentHandling.Skip,
         });
-        if (opcodeMapData == null) 
+        if (opcodeMapData == null)
         {
             Console.Error.WriteLine("Invalid opcodes file");
             return;
