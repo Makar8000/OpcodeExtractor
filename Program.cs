@@ -41,39 +41,63 @@ public class Program
         rootCommand.AddArgument(outputFormatArgument);
         rootCommand.AddArgument(inputMapKeyArgument);
 
-        rootCommand.SetHandler((opcodeMapFile, gameExecutable, dumpAllOpcodes, outputFormat, inputMapKey) =>
-            {
-                var opcodes = ExtractOpcodes(opcodeMapFile!, gameExecutable!, dumpAllOpcodes, inputMapKey);
-                OutputOpcodes(opcodes, outputFormat);
-            },
-            opcodeFileMapArgument, gameExecutableArgument, dumpAllOpcodesArgument, outputFormatArgument, inputMapKeyArgument);
+        rootCommand.SetHandler(CommandHandler, opcodeFileMapArgument, gameExecutableArgument, dumpAllOpcodesArgument, outputFormatArgument, inputMapKeyArgument);
 
         return await rootCommand.InvokeAsync(args);
     }
 
-    private static void OutputOpcodes(Dictionary<int, string> opcodes, OutputFormat outputFormat)
+    private static void CommandHandler(FileInfo? opcodeMapFile, FileInfo? gameExecutable, bool dumpAllOpcodes, OutputFormat outputFormat, string inputMapKey)
+    {
+        var opcodeMapData = JsonSerializer.Deserialize<JsonNode>(File.ReadAllText(opcodeMapFile!.FullName), new JsonSerializerOptions()
+        {
+            ReadCommentHandling = JsonCommentHandling.Skip,
+        });
+        if (opcodeMapData == null) 
+        {
+            Console.Error.WriteLine("Invalid opcodes file");
+            return;
+        }
+
+        var opcodes = ExtractOpcodes(opcodeMapData, gameExecutable!, dumpAllOpcodes, inputMapKey);
+
+        var sortOrder = opcodeMapData[inputMapKey]?.AsObject().ToDictionary().Keys.ToArray();
+        if (sortOrder == null)
+        {
+            Console.Error.WriteLine("Invalid data type for \"map\" in opcodes file");
+            sortOrder = [];
+        }
+        OutputOpcodes(opcodes, outputFormat, sortOrder);
+    }
+
+    private static void OutputOpcodes(Dictionary<int, string> opcodes, OutputFormat outputFormat, string[] sortOrder)
     {
         if (outputFormat == OutputFormat.All || outputFormat == OutputFormat.FFXIV_ACT_Plugin)
         {
-            OutputOpcodesForFFXIV_ACT_Plugin(opcodes);
+            OutputOpcodesForFFXIV_ACT_Plugin(opcodes, sortOrder);
         }
         if (outputFormat == OutputFormat.All || outputFormat == OutputFormat.OverlayPlugin)
         {
-            OutputOpcodesForOverlayPlugin(opcodes);
+            OutputOpcodesForOverlayPlugin(opcodes, sortOrder);
         }
     }
 
-    private static void OutputOpcodesForFFXIV_ACT_Plugin(Dictionary<int, string> opcodes)
+    private static void OutputOpcodesForFFXIV_ACT_Plugin(Dictionary<int, string> opcodes, string[] sortOrder)
     {
-        foreach (var entry in opcodes)
+        var entries = opcodes.ToList().OrderBy(x => Array.IndexOf(sortOrder, x.Value)).ToList();
+        foreach (var entry in entries)
         {
             Console.WriteLine($"{entry.Value}|{entry.Key:x}");
         }
     }
 
-    private static void OutputOpcodesForOverlayPlugin(Dictionary<int, string> opcodes)
+    private static void OutputOpcodesForOverlayPlugin(Dictionary<int, string> opcodes, string[] sortOrder)
     {
-        Dictionary<string, Dictionary<string, int>> overlayPluginMap = [];
+        Dictionary<string, Dictionary<string, int>?> overlayPluginMap = [];
+
+        foreach (var key in sortOrder)
+        {
+            overlayPluginMap[key] = null;
+        }
 
         foreach (var entry in opcodes)
         {
@@ -95,17 +119,11 @@ public class Program
     /// <summary>
     /// Map opcodes as defined in opcodeMapFile for executable gameExecutable
     /// </summary>
-    /// <param name="opcodeMapFile">The opcode map to use</param>
+    /// <param name="opcodeMapData">The opcode map to use</param>
     /// <param name="gameExecutable">The game executable to map</param>
     /// <param name="dumpAllOpcodes">Whether to dump all opcodes, or just the mapped opcodes</param>
-    public static Dictionary<int, string> ExtractOpcodes(FileInfo opcodeMapFile, FileInfo gameExecutable, bool dumpAllOpcodes, string inputMapKey)
+    public static Dictionary<int, string> ExtractOpcodes(JsonNode opcodeMapData, FileInfo gameExecutable, bool dumpAllOpcodes, string inputMapKey)
     {
-        var opcodeMapData = JsonSerializer.Deserialize<JsonNode>(File.ReadAllText(opcodeMapFile.FullName), new JsonSerializerOptions()
-        {
-            ReadCommentHandling = JsonCommentHandling.Skip,
-        });
-        if (opcodeMapData == null) return [];
-
         var opcodeMethod = opcodeMapData["method"]?.ToString() ?? "";
 
         byte[] gameData = File.ReadAllBytes(gameExecutable.FullName);
